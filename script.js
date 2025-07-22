@@ -7,13 +7,13 @@ import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/f
 // You can get this from your project's settings in the Firebase Console.
 // =========================================================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyBwf9CYsl3SO3nD56al3ykKlXV1BHtzwbg",
-  authDomain: "gate-study-tracker.firebaseapp.com",
-  projectId: "gate-study-tracker",
-  storageBucket: "gate-study-tracker.firebasestorage.app",
-  messagingSenderId: "213391184427",
-  appId: "1:213391184427:web:3b1505832d6cffb9cc506e"
-};
+    apiKey: "AIzaSyBwf9CYsl3SO3nD56al3ykKlXV1BHtzwbg",
+    authDomain: "gate-study-tracker.firebaseapp.com",
+    projectId: "gate-study-tracker",
+    storageBucket: "gate-study-tracker.firebasestorage.app",
+    messagingSenderId: "213391184427",
+    appId: "1:213391184427:web:3b1505832d6cffb9cc506e"
+  };
 
 // --- DATA CONFIGURATION ---
 const SUBJECTS = [
