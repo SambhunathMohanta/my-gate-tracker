@@ -1,7 +1,7 @@
 // All imports MUST be at the very top of the file.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 // Your new, correct Firebase configuration
 const firebaseConfig = {
@@ -14,35 +14,14 @@ const firebaseConfig = {
 };
 
 // --- DATA CONFIGURATION ---
-const SUBJECTS = [
-    'NT', 'S & S', 'AEC', 'DE', 'CS', 'EMT',
-    'EEM', 'EM I & II', 'PS', 'PE', 'MATH', 'GA'
-];
-
-const TASK_COLUMNS = [
-    'Videos', 'Notes', 'Book Examples', 'DPPs', 'Workbook Exercises',
-    'PYQs', 'Test Series', 'Bites & Bytes', 'ISRO/ESE PYQs',
-    'Revision 1', 'Revision 2', 'ME Short Notes'
-];
-
+const SUBJECTS = ['NT', 'S & S', 'AEC', 'DE', 'CS', 'EMT', 'EEM', 'EM I & II', 'PS', 'PE', 'MATH', 'GA'];
+const TASK_COLUMNS = ['Videos', 'Notes', 'Book Examples', 'DPPs', 'Workbook Exercises', 'PYQs', 'Test Series', 'Bites & Bytes', 'ISRO/ESE PYQs', 'Revision 1', 'Revision 2', 'ME Short Notes'];
 const TOPICS = {
-    'NT': ['Basics', 'Theorems', 'Transient Analysis', 'Two-Port Networks', 'AC Analysis'],
-    'S & S': ['Signal Types', 'LTI Systems', 'Fourier Series', 'Fourier Transform', 'Laplace Transform', 'Z-Transform'],
-    'AEC': ['Diodes', 'BJT', 'FET/MOSFET', 'Op-Amps', 'Oscillators'],
-    'DE': ['Number Systems', 'Logic Gates', 'Combinational Circuits', 'Sequential Circuits', 'ADC/DAC'],
-    'CS': ['AM/FM', 'Sampling', 'PCM/DM', 'Digital Modulation', 'Information Theory'],
-    'EMT': ['Vector Calculus', 'Electrostatics', 'Magnetostatics', 'Maxwell\'s Equations', 'Wave Propagation'],
-    'EEM': ['Basics of Measurement', 'Bridges and Potentiometers', 'Measuring Instruments', 'CRO', 'Transducers'],
-    'EM I & II': ['Transformers', 'DC Machines', 'Induction Machines', 'Synchronous Machines'],
-    'PS': ['Power Generation', 'Transmission & Distribution', 'Fault Analysis', 'Stability', 'Load Flow'],
-    'PE': ['Power Diodes', 'Thyristors', 'Choppers', 'Inverters', 'Drives'],
-    'MATH': ['Linear Algebra', 'Calculus', 'Differential Equations', 'Complex Variables', 'Probability'],
-    'GA': ['Verbal Ability', 'Numerical Ability', 'Logical Reasoning', 'Data Interpretation']
+    'NT': ['Basics', 'Theorems', 'Transient Analysis', 'Two-Port Networks', 'AC Analysis'], 'S & S': ['Signal Types', 'LTI Systems', 'Fourier Series', 'Fourier Transform', 'Laplace Transform', 'Z-Transform'], 'AEC': ['Diodes', 'BJT', 'FET/MOSFET', 'Op-Amps', 'Oscillators'], 'DE': ['Number Systems', 'Logic Gates', 'Combinational Circuits', 'Sequential Circuits', 'ADC/DAC'], 'CS': ['AM/FM', 'Sampling', 'PCM/DM', 'Digital Modulation', 'Information Theory'], 'EMT': ['Vector Calculus', 'Electrostatics', 'Magnetostatics', 'Maxwell\'s Equations', 'Wave Propagation'], 'EEM': ['Basics of Measurement', 'Bridges and Potentiometers', 'Measuring Instruments', 'CRO', 'Transducers'], 'EM I & II': ['Transformers', 'DC Machines', 'Induction Machines', 'Synchronous Machines'], 'PS': ['Power Generation', 'Transmission & Distribution', 'Fault Analysis', 'Stability', 'Load Flow'], 'PE': ['Power Diodes', 'Thyristors', 'Choppers', 'Inverters', 'Drives'], 'MATH': ['Linear Algebra', 'Calculus', 'Differential Equations', 'Complex Variables', 'Probability'], 'GA': ['Verbal Ability', 'Numerical Ability', 'Logical Reasoning', 'Data Interpretation']
 };
 
 // --- FIREBASE INITIALIZATION ---
-let app, db, auth, userId;
-let unsubscribeSnapshot = null;
+let app, db, auth, userId, unsubscribeSnapshot = null;
 
 // --- DOM ELEMENTS ---
 const homePage = document.getElementById('home-page');
@@ -50,33 +29,34 @@ const subjectPage = document.getElementById('subject-page');
 const subjectGrid = document.getElementById('subject-grid');
 const backButton = document.getElementById('back-button');
 const subjectTitle = document.getElementById('subject-title');
-const subjectTable = document.getElementById('subject-table');
-const tableContainer = document.getElementById('table-container');
-const loader = document.getElementById('loader');
+const topicCardsContainer = document.getElementById('topic-cards-container');
 
-// --- APPLICATION LOGIC ---
-
-async function initializeAppLogic() {
+// --- APPLICATION INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', async () => {
     try {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, user => {
             if (user) {
                 userId = user.uid;
-                console.log("User authenticated with UID:", userId);
                 renderHomePage();
             } else {
-                console.log("User not signed in, attempting anonymous sign-in.");
-                signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
+                signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
             }
         });
     } catch (error) {
         console.error("Firebase Initialization Error:", error);
-        document.getElementById('main-content').innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg" role="alert"><strong class="font-bold">Error!</strong> <span class="block sm:inline">Could not connect to the database.</span></div>`;
     }
-}
+});
+
+backButton.addEventListener('click', () => {
+    if (unsubscribeSnapshot) unsubscribeSnapshot();
+    homePage.classList.remove('hidden');
+    subjectPage.classList.add('hidden');
+});
+
+// --- PAGE RENDERING LOGIC ---
 
 function renderHomePage() {
     subjectGrid.innerHTML = '';
@@ -87,96 +67,114 @@ function renderHomePage() {
         card.addEventListener('click', () => showSubjectPage(subject));
         subjectGrid.appendChild(card);
     });
-    homePage.classList.remove('hidden');
-    subjectPage.classList.add('hidden');
 }
 
 function showSubjectPage(subject) {
     homePage.classList.add('hidden');
     subjectPage.classList.remove('hidden');
     subjectTitle.textContent = subject;
-    loader.style.display = 'flex';
-    tableContainer.classList.add('hidden');
-    subjectTable.querySelector('thead').innerHTML = '';
-    subjectTable.querySelector('tbody').innerHTML = '';
-    listenToSubjectData(subject);
-}
 
-function listenToSubjectData(subject) {
-    if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-    }
-    const subjectDocRef = doc(db, `users/${userId}/gate-prep`, subject);
-
+    const subjectDocRef = doc(db, "users", userId, "gate-prep", subject);
     unsubscribeSnapshot = onSnapshot(subjectDocRef, (docSnap) => {
-        let subjectData = docSnap.exists() ? docSnap.data() : {};
-        renderSubjectTable(subject, subjectData);
-        loader.style.display = 'none';
-        tableContainer.classList.remove('hidden');
-    }, (error) => {
-        console.error("Error fetching subject data:", error);
-        loader.innerText = "Error loading data.";
+        const subjectData = docSnap.exists() ? docSnap.data() : {};
+        renderTopicCards(subject, subjectData);
+        updateOverallSubjectProgress(subject, subjectData);
     });
 }
 
-function renderSubjectTable(subject, data) {
-    const thead = subjectTable.querySelector('thead');
-    const tbody = subjectTable.querySelector('tbody');
-    let headerHtml = '<tr><th scope="col" class="sticky-col px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Topic</th>';
-    TASK_COLUMNS.forEach(task => {
-        headerHtml += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">${task}</th>`;
-    });
-    headerHtml += '</tr>';
-    thead.innerHTML = headerHtml;
-
-    tbody.innerHTML = '';
+function renderTopicCards(subject, subjectData) {
+    topicCardsContainer.innerHTML = '';
     const subjectTopics = TOPICS[subject] || [];
+
     subjectTopics.forEach(topic => {
-        const row = document.createElement('tr');
-        row.className = "hover:bg-gray-50 dark:hover:bg-gray-700";
-        let rowHtml = `<td class="sticky-col px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${topic}</td>`;
+        const topicData = subjectData[topic] || {};
+        let completedTasks = 0;
+        const totalTasks = TASK_COLUMNS.length;
+
+        let taskCheckboxesHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">';
         TASK_COLUMNS.forEach(task => {
-            const isChecked = data[topic] && data[topic][task];
-            rowHtml += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><input type="checkbox" data-subject="${subject}" data-topic="${topic}" data-task="${task}" class="h-5 w-5 rounded-md text-purple-600 bg-gray-200 border-gray-300 focus:ring-purple-500 cursor-pointer" ${isChecked ? 'checked' : ''}></td>`;
+            const isChecked = topicData[task] === true;
+            if (isChecked) completedTasks++;
+
+            taskCheckboxesHTML += `
+                <label class="flex items-center space-x-2 text-sm cursor-pointer">
+                    <input type="checkbox" data-subject="${subject}" data-topic="${topic}" data-task="${task}" 
+                           class="h-4 w-4 rounded text-purple-600 bg-gray-200 border-gray-300 focus:ring-purple-500" 
+                           ${isChecked ? 'checked' : ''}>
+                    <span>${task}</span>
+                </label>
+            `;
         });
-        row.innerHTML = rowHtml;
-        tbody.appendChild(row);
+        taskCheckboxesHTML += '</div>';
+
+        const topicProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        const isComplete = topicProgress === 100;
+
+        const card = document.createElement('div');
+        card.className = `topic-card bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border-2 border-transparent ${isComplete ? 'is-complete' : ''}`;
+        card.innerHTML = `
+            <div class="flex justify-between items-center">
+                <h4 class="text-lg font-bold text-gray-800 dark:text-gray-200">${topic}</h4>
+                ${isComplete ? '<span class="completion-check">✅</span>' : ''}
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 my-2">
+                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${topicProgress}%"></div>
+            </div>
+            <p class="text-xs text-right">${completedTasks} / ${totalTasks} tasks complete</p>
+            ${taskCheckboxesHTML}
+        `;
+        topicCardsContainer.appendChild(card);
     });
 
-    tbody.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+    topicCardsContainer.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', handleCheckboxChange);
     });
 }
 
+function updateOverallSubjectProgress(subject, subjectData) {
+    const subjectTopics = TOPICS[subject] || [];
+    if (subjectTopics.length === 0) return;
+
+    let totalCompletedTopics = 0;
+    subjectTopics.forEach(topic => {
+        const topicData = subjectData[topic] || {};
+        const completedTasks = TASK_COLUMNS.filter(task => topicData[task] === true).length;
+        if (completedTasks === TASK_COLUMNS.length) {
+            totalCompletedTopics++;
+        }
+    });
+
+    const overallProgress = Math.round((totalCompletedTopics / subjectTopics.length) * 100);
+    document.getElementById('subject-progress-bar').style.width = `${overallProgress}%`;
+    document.getElementById('subject-progress-text').textContent = `${overallProgress}%`;
+}
+
+
+// --- THE NEW, RELIABLE SAVING LOGIC ---
+
 async function handleCheckboxChange(event) {
     const { subject, topic, task } = event.target.dataset;
     const isChecked = event.target.checked;
-    
-    // Correctly reference the document path
     const subjectDocRef = doc(db, "users", userId, "gate-prep", subject);
 
     try {
-        // Use dot notation to update a specific field within a nested object
-        const fieldToUpdate = `${topic}.${task}`;
-        const updateData = { [fieldToUpdate]: isChecked };
+        // 1. Get the current data from Firestore
+        const docSnap = await getDoc(subjectDocRef);
+        const subjectData = docSnap.exists() ? docSnap.data() : {};
 
-        // Use setDoc with { merge: true } to create or update the field
-        await setDoc(subjectDocRef, updateData, { merge: true });
+        // 2. Modify the data in memory
+        if (!subjectData[topic]) {
+            subjectData[topic] = {}; // Create topic object if it doesn't exist
+        }
+        subjectData[topic][task] = isChecked;
+
+        // 3. Write the entire updated subject object back
+        await setDoc(subjectDocRef, subjectData);
         console.log("Firestore updated successfully.");
+
     } catch (error) {
         console.error("Error updating Firestore:", error);
-        event.target.checked = !isChecked;
+        event.target.checked = !isChecked; // Revert checkbox on error
         alert("Could not save your progress. Please try again.");
     }
 }
-
-backButton.addEventListener('click', () => {
-    if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
-    }
-    renderHomePage();
-});
-
-// --- START THE APP ---
-document.addEventListener('DOMContentLoaded', initializeAppLogic);
