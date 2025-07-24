@@ -1,23 +1,4 @@
 // All imports MUST be at the very top of the file.
-// --- APPLICATION INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                userId = user.uid;
-                renderHomePage();
-                calculateAndDisplayOverallProgress(); // <-- ADD THIS LINE HERE
-            } else {
-                signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
-            }
-        });
-    } catch (error) {
-        console.error("Firebase Initialization Error:", error);
-    }
-});
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -60,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (user) {
                 userId = user.uid;
                 renderHomePage();
+                calculateAndDisplayOverallProgress(); 
             } else {
                 signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
             }
@@ -73,6 +55,7 @@ backButton.addEventListener('click', () => {
     if (unsubscribeSnapshot) unsubscribeSnapshot();
     homePage.classList.remove('hidden');
     subjectPage.classList.add('hidden');
+    calculateAndDisplayOverallProgress(); // Re-calculate when going back home
 });
 
 // --- PAGE RENDERING LOGIC ---
@@ -167,7 +150,31 @@ function updateOverallSubjectProgress(subject, subjectData) {
     document.getElementById('subject-progress-bar').style.width = `${overallProgress}%`;
     document.getElementById('subject-progress-text').textContent = `${overallProgress}%`;
 }
-// Add this new function to script.js
+
+
+async function handleCheckboxChange(event) {
+    const { subject, topic, task } = event.target.dataset;
+    const isChecked = event.target.checked;
+    const subjectDocRef = doc(db, "users", userId, "gate-prep", subject);
+
+    try {
+        const docSnap = await getDoc(subjectDocRef);
+        const subjectData = docSnap.exists() ? docSnap.data() : {};
+
+        if (!subjectData[topic]) {
+            subjectData[topic] = {};
+        }
+        subjectData[topic][task] = isChecked;
+
+        await setDoc(subjectDocRef, subjectData);
+        console.log("Firestore updated successfully.");
+
+    } catch (error) {
+        console.error("Error updating Firestore:", error);
+        event.target.checked = !isChecked;
+        alert("Could not save your progress. Please try again.");
+    }
+}
 
 async function calculateAndDisplayOverallProgress() {
     let totalTopicsAcrossAllSubjects = 0;
@@ -179,15 +186,17 @@ async function calculateAndDisplayOverallProgress() {
 
         const subjectDocRef = doc(db, "users", userId, "gate-prep", subject);
         const docSnap = await getDoc(subjectDocRef);
-        const subjectData = docSnap.exists() ? docSnap.data() : {};
         
-        subjectTopics.forEach(topic => {
-            const topicData = subjectData[topic] || {};
-            const completedTasks = TASK_COLUMNS.filter(task => topicData[task] === true).length;
-            if (completedTasks === TASK_COLUMNS.length && TASK_COLUMNS.length > 0) {
-                totalCompletedTopicsAcrossAllSubjects++;
-            }
-        });
+        if (docSnap.exists()) {
+            const subjectData = docSnap.data();
+            subjectTopics.forEach(topic => {
+                const topicData = subjectData[topic] || {};
+                const completedTasks = TASK_COLUMNS.filter(task => topicData[task] === true).length;
+                if (completedTasks === TASK_COLUMNS.length && TASK_COLUMNS.length > 0) {
+                    totalCompletedTopicsAcrossAllSubjects++;
+                }
+            });
+        }
     }
 
     const overallPercentage = totalTopicsAcrossAllSubjects > 0
@@ -196,33 +205,4 @@ async function calculateAndDisplayOverallProgress() {
 
     document.getElementById('overall-progress-bar').style.width = `${overallPercentage}%`;
     document.getElementById('overall-progress-text').textContent = `${overallPercentage}%`;
-}
-
-// --- THE NEW, RELIABLE SAVING LOGIC ---
-
-async function handleCheckboxChange(event) {
-    const { subject, topic, task } = event.target.dataset;
-    const isChecked = event.target.checked;
-    const subjectDocRef = doc(db, "users", userId, "gate-prep", subject);
-
-    try {
-        // 1. Get the current data from Firestore
-        const docSnap = await getDoc(subjectDocRef);
-        const subjectData = docSnap.exists() ? docSnap.data() : {};
-
-        // 2. Modify the data in memory
-        if (!subjectData[topic]) {
-            subjectData[topic] = {}; // Create topic object if it doesn't exist
-        }
-        subjectData[topic][task] = isChecked;
-
-        // 3. Write the entire updated subject object back
-        await setDoc(subjectDocRef, subjectData);
-        console.log("Firestore updated successfully.");
-
-    } catch (error) {
-        console.error("Error updating Firestore:", error);
-        event.target.checked = !isChecked; // Revert checkbox on error
-        alert("Could not save your progress. Please try again.");
-    }
 }
