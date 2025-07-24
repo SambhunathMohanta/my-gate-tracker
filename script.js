@@ -151,10 +151,16 @@ function renderSubjectTable(subject, data) {
 async function handleCheckboxChange(event) {
     const { subject, topic, task } = event.target.dataset;
     const isChecked = event.target.checked;
-    const subjectDocRef = doc(db, `users/${userId}/gate-prep`, subject);
+    
+    // Correctly reference the document path
+    const subjectDocRef = doc(db, "users", userId, "gate-prep", subject);
 
     try {
-        const updateData = { [`${topic}.${task}`]: isChecked };
+        // Use dot notation to update a specific field within a nested object
+        const fieldToUpdate = `${topic}.${task}`;
+        const updateData = { [fieldToUpdate]: isChecked };
+
+        // Use setDoc with { merge: true } to create or update the field
         await setDoc(subjectDocRef, updateData, { merge: true });
         console.log("Firestore updated successfully.");
     } catch (error) {
