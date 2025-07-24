@@ -1,4 +1,23 @@
 // All imports MUST be at the very top of the file.
+// --- APPLICATION INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                userId = user.uid;
+                renderHomePage();
+                calculateAndDisplayOverallProgress(); // <-- ADD THIS LINE HERE
+            } else {
+                signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
+            }
+        });
+    } catch (error) {
+        console.error("Firebase Initialization Error:", error);
+    }
+});
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -148,7 +167,36 @@ function updateOverallSubjectProgress(subject, subjectData) {
     document.getElementById('subject-progress-bar').style.width = `${overallProgress}%`;
     document.getElementById('subject-progress-text').textContent = `${overallProgress}%`;
 }
+// Add this new function to script.js
 
+async function calculateAndDisplayOverallProgress() {
+    let totalTopicsAcrossAllSubjects = 0;
+    let totalCompletedTopicsAcrossAllSubjects = 0;
+
+    for (const subject of SUBJECTS) {
+        const subjectTopics = TOPICS[subject] || [];
+        totalTopicsAcrossAllSubjects += subjectTopics.length;
+
+        const subjectDocRef = doc(db, "users", userId, "gate-prep", subject);
+        const docSnap = await getDoc(subjectDocRef);
+        const subjectData = docSnap.exists() ? docSnap.data() : {};
+        
+        subjectTopics.forEach(topic => {
+            const topicData = subjectData[topic] || {};
+            const completedTasks = TASK_COLUMNS.filter(task => topicData[task] === true).length;
+            if (completedTasks === TASK_COLUMNS.length && TASK_COLUMNS.length > 0) {
+                totalCompletedTopicsAcrossAllSubjects++;
+            }
+        });
+    }
+
+    const overallPercentage = totalTopicsAcrossAllSubjects > 0
+        ? Math.round((totalCompletedTopicsAcrossAllSubjects / totalTopicsAcrossAllSubjects) * 100)
+        : 0;
+
+    document.getElementById('overall-progress-bar').style.width = `${overallPercentage}%`;
+    document.getElementById('overall-progress-text').textContent = `${overallPercentage}%`;
+}
 
 // --- THE NEW, RELIABLE SAVING LOGIC ---
 
