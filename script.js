@@ -1,4 +1,10 @@
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
 
+  // Your web app's Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyA_9LWNHTUYjW9o5ZgBoEfQqdtYhIUIX0s",
     authDomain: "gate-tracker-final.firebaseapp.com",
@@ -7,6 +13,10 @@
     messagingSenderId: "586102213734",
     appId: "1:586102213734:web:88fa9b3a3f0e421b9131a7"
   };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
 
  
 // --- DATA CONFIGURATION ---
